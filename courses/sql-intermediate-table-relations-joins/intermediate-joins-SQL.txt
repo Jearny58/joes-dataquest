@@ -1,0 +1,95 @@
+SYNTAX FOR JOINING DATA FROM MORE THAN 2 TABLES
+
+SELECT [column_names] FROM [table_name_one]
+[join_type] JOIN [table_name_two] ON [join_constraint]
+[join_type] JOIN [table_name_three] ON [join_constraint];
+
+- joins in order
+
+FIRST ATTEMPT
+SELECT *
+FROM invoice_line il
+INNER JOIN track t ON t.track_id = il.invoice_line_id
+INNER JOIN media_type m ON m.media_type_id = t.media_type_id
+WHERE invoice_id = 4;
+
+ACTUAL ANSWER
+SELECT 
+    il.track_id, 
+    t.name track_name, 
+    m.name track_type, 
+    il.unit_price, 
+    il.quantity
+FROM invoice_line il
+INNER JOIN track t ON t.track_id = il.track_id
+INNER JOIN media_type m ON m.media_type_id = t.media_type_id
+WHERE il.invoice_id = 4;
+
+- data for the artist's name is not directly connected to the track table
+
+FIRST ATTEMPT (CORRECT!)
+SELECT
+    il.track_id,
+    t.name track_name,
+    art.name artist_name,
+    mt.name track_type,
+    il.unit_price,
+    il.quantity,
+    art.name artist_name  
+FROM invoice_line il
+INNER JOIN track t ON t.track_id = il.track_id
+INNER JOIN media_type mt ON mt.media_type_id = t.media_type_id
+INNER JOIN album al ON al.album_id = t.album_id
+INNER JOIN artist art ON art.artist_id = al.artist_id
+WHERE il.invoice_id = 4;
+
+- write a subquery that produces a table with track.track_id and artist.name
+SELECT
+    t.track_id,
+    ar.name artist_name
+FROM track t
+INNER JOIN album al ON al.album_id = t.album_id
+INNER JOIN artist ar ON ar.artist_id = al.artist_id
+ORDER BY 1 LIMIT 5;
+
+- Join that subquery to the invoice_line table
+SELECT
+    il.invoice_line_id,
+    il.track_id,
+    ta.artist_name
+FROM invoice_line il
+INNER JOIN (
+            SELECT
+                t.track_id,
+                ar.name artist_name
+            FROM track t
+            INNER JOIN album al ON al.album_id = t.album_id
+            INNER JOIN artist ar ON ar.artist_id = al.artist_id
+            ) ta ON ta.track_id = il.track_id
+ORDER BY 1 LIMIT 5;
+
+- Use a GROUP BY statement to calculate the number of times each artist has had a track purchased, and find the top 10
+
+SELECT
+    ta.artist_name artist,
+    COUNT(*) tracks_purchased
+FROM invoice_line il
+INNER JOIN (
+            SELECT
+                t.track_id,
+                ar.name artist_name
+            FROM track t
+            INNER JOIN album al ON al.album_id = t.album_id
+            INNER JOIN artist ar ON ar.artist_id = al.artist_id
+            ) ta ON ta.track_id = il.track_id
+GROUP BY 1
+ORDER BY 2 DESC LIMIT 10;
+
+SELECT
+    t.track_id,
+    t.album_id,
+    ar.name artist_name
+FROM track t
+INNER JOIN album al ON al.album_id = t.album_id
+INNER JOIN artist ar ON ar.artist_id = al.artist_id
+ORDER BY 1 LIMIT 5;
