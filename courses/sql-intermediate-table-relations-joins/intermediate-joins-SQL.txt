@@ -93,3 +93,163 @@ FROM track t
 INNER JOIN album al ON al.album_id = t.album_id
 INNER JOIN artist ar ON ar.artist_id = al.artist_id
 ORDER BY 1 LIMIT 5;
+
+### Write a query that returns the top 5 albums, as calculated by the number of times a track from that album has been purchased. Your query should return the following, in order:
+    - album, the title of the album
+    - artist, the artist who produced the album
+    - tracks_purchased, the total number of tracks purchased from that album
+Your query should list the albums from most tracks purchased to least tracks purchased ###
+
+SELECT
+    ta.album_title album,
+    ta.artist_name artist,
+    COUNT(*) tracks_purchased
+FROM invoice_line il
+INNER JOIN (
+            SELECT
+                t.track_id,
+                al.title album_title,
+                ar.name artist_name
+            FROM track t
+            INNER JOIN album al ON al.album_id = t.album_id
+            INNER JOIN artist ar ON ar.artist_id = al.artist_id
+            ) ta ON ta.track_id = il.track_id
+GROUP BY 1, 2
+ORDER BY 3 DESC LIMIT 5;
+
+
+### Recursive Joins -- a way of joining a table to itself ###
+### EXAMPLE ###
+SELECT
+    e1.employee_id,
+    e2.employee_id supervisor_id
+FROM employee e1
+INNER JOIN employee e2 on e1.reports_to = e2.employee_id
+LIMIT 4;
+
+- can combines two columns into a single column by using the concatenate operator (||)
+### EXAMPLE ###
+SELECT ('this' || 'is' || 'my' || 'string');
+Output --> thisismystring
+### EXAMPLE ###
+SELECT
+    album_id,
+    artist_id,
+    "album id is" || album_id col_1,
+    "artist id is" || artist_id col2,
+    album_id || artist_id col3
+FROM album LIMIT 3;
+
+### PROBLEMS ###
+- Write a query that returns information about each employee and their supervisor. Your query should return the following columns, in order:
+    - employee_name: containing the first_name and last_name columns separated by a space
+    - employee_title: the title of that employee
+    - supervisor_name: the first and last name of the person the employee reports to
+    - supervisor_title: the title of the person the employee reports to
+- the report should include employees even if they do not report to another employee
+- the report should be sorted alphabetically by the employee_name column
+
+### ANSWER ###
+SELECT
+    e1.first_name || ' ' || e1.last_name AS employee_name,
+    e1.title employee_title,
+    e2.first_name || ' ' || e2.last_name AS supervisor_name,
+    e2.title AS supervisor_title
+FROM employee e1
+LEFT JOIN employee e2 on e1.reports_to = e2.employee_id
+ORDER BY 1;
+
+
+### PATTERN MATCHING USING LIKE ###
+WHERE [column_name] LIKE ['pattern']
+- your pattern should be the substring you want to match for, and one or more % characters
+    - `%Jen` will match Jen at the end of a string
+    - `Jen%` will match Jen at the start of a string
+    - `%Jen%` will match Jen anywhere within the string
+    
+### EXAMPLE ###
+SELECT
+    first_name,
+    last_name,
+    phone
+FROM customer
+WHERE first_name LIKE "%Jen%";
+
+- Keep in mind, SQLite `LIKE` is case insensitive, so upper/lowercase doesn't matter
+    - other flavors of SQL may be case sensitive, so you may need to use LOWER()
+
+### ANSWER ###
+SELECT
+    first_name,
+    last_name,
+    phone
+FROM customer
+WHERE first_name LIKE '%Belle%';
+
+### GENERATING COLUMNS WITH THE CASE STATEMENT ###
+- to generate a column that puts observations into a category --> case statements
+    - acts like a series of if/then options for a new column
+### SYNTAX ###
+CASE
+    WHEN [comparison_1] THEN [value_1]
+    WHEN [comparison_2] THEN [value_2]
+    ELSE [value_3]
+    END
+    AS [new_col_name]
+
+- can be more than 1 WHEN lines, and the ELSE line is optional
+    - w/o ELSE, rows that don't match WHEN will be assigned a null value
+    
+### EXAMPLE - using CASE to add new column 'protected' which indicates whether each media type is protected ###
+SELECT
+    media_type_id,
+    name,
+    CASE
+        WHEN name LIKE '%Protected%' THEN 1
+        ELSE 0
+        END
+        AS protected
+FROM media_type;
+
+- Write a query that summarizes the purchases of each customer.
+- Your query should include the following columns, in order:
+    - customer_name, containing the first_name and last_name columns separated by a space
+    - number_of_purchases, containing the number of purchses made by each customer
+    - total_spent, total sum of money spent by each customer
+    - customer_category, column that categorizes the customer based on their total purchases
+        - small spender, if the customer's total purchases are less than $40
+        - big spender, if purchases are greater than $100
+        - regular, if the cutomer's purchases are $40-100 (inclusive
+    - order your results by the customer_name column
+   
+### ANSWER ###
+SELECT
+    c.first_name || ' ' || c.last_name customer_name,
+    COUNT(i.invoice_id) number_of_purchases, 
+    SUM(i.total) total_spent,
+    CASE
+        WHEN SUM(i.total) < 40 THEN 'small spender'
+        WHEN SUM(i.total) > 100 THEN 'big spender'
+        ELSE 'regular'
+        END
+        AS customer_category
+FROM invoice i
+INNER JOIN customer c ON i.customer_id = c.customer_id
+GROUP BY 1
+ORDER BY 1;
+
+### NEXT STEPS ###
+In this mission, we learned how to work with databases with more than two tables, including how to:
+
+- write queries that join 3 or more tables
+- combine multiple joins with subqueries
+- create recursive joins
+- use LIKE to incorporate partial matches
+- generate conditional columns using CASE
+
+In the next mission, we'll continue to work with the Chinook database while we learn how to:
+
+- write increasingly complex queries
+- construct and format queries that are easy to read
+- create temporary and permanent views using with and view
+- use set operations to combine rows
